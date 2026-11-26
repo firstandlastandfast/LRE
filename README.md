@@ -5,3 +5,6 @@ Preliminary-design estimates only; not a substitute for engineering review and t
 ## Run
 - Windows: double-click `RocketLab.bat`
 - Mac/Linux: `./RocketLab.sh`
+
+## App link
+- https://liquidrocketengine.streamlit.app/
