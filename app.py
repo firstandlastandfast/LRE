@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from rl.mission import Mission
 from rl.veh import trade
-from rl.thermo import best_of, HAS_CEA
+from rl.thermo import best_of
 from rl.core import PROPELLANTS
 
 st.title("RL - RocketLab")
@@ -18,22 +18,28 @@ dv = Mission(payload, alt, lat, gl, dl, sl).delta_v()
 st.subheader("MISSION")
 st.json({k: round(v, 1) for k, v in dv.items()})
 
-st.subheader("VEH / TRADE (2-stage, sorted by liftoff mass)")
+st.subheader("THERMO (CEA)")
+c1, c2 = st.columns(2)
+pc1 = c1.number_input("Stage 1 chamber pressure (bar)", 5.0, 300.0, 70.0)
+e1 = c1.number_input("Stage 1 nozzle expansion ratio", 2.0, 300.0, 20.0)
+pc2 = c2.number_input("Stage 2 chamber pressure (bar)", 5.0, 300.0, 60.0)
+e2 = c2.number_input("Stage 2 nozzle expansion ratio", 2.0, 300.0, 80.0)
+
+rows, isp1, isp2 = [], {}, {}
+for p in PROPELLANTS:
+    of1, r1 = best_of(p, pc1, e1)
+    of2, r2 = best_of(p, pc2, e2)
+    isp1[p] = 0.35 * r1["isp_sl"] + 0.65 * r1["isp_vac"]
+    isp2[p] = r2["isp_vac"]
+    rows.append(dict(propellant=p, s1_best_OF=round(of1, 2), s1_isp_sl=round(r1["isp_sl"]),
+                     s1_isp_vac=round(r1["isp_vac"]), s2_best_OF=round(of2, 2),
+                     s2_isp_vac=round(r2["isp_vac"]),
+                     s1_chamber_T_K=r1["tc"] and round(r1["tc"]), source=r1["source"]))
+st.dataframe(pd.DataFrame(rows))
+
+st.subheader("VEH / TRADE (2-stage, uses THERMO Isp, sorted by liftoff mass)")
 rows = [dict(stage1=v.prop1, stage2=v.prop2, split_s1=round(v.split, 2),
              liftoff_kg=round(v.liftoff_kg), s1_prop_kg=round(v.s1["prop"]),
              s2_prop_kg=round(v.s2["prop"]), thrust1_kN=round(v.thrust1_kN, 1),
-             thrust2_kN=round(v.thrust2_kN, 1)) for v in trade(payload, dv["total"])]
-st.dataframe(pd.DataFrame(rows))
-
-st.subheader("THERMO")
-pc = st.number_input("Chamber pressure (bar)", 5.0, 300.0, 70.0)
-eps = st.number_input("Nozzle expansion ratio", 2.0, 300.0, 40.0)
-if not HAS_CEA:
-    st.warning("RocketCEA not available: showing placeholder values.")
-rows = []
-for p in PROPELLANTS:
-    of, r = best_of(p, pc, eps)
-    rows.append(dict(propellant=p, best_OF=round(of, 2), isp_vac_s=round(r["isp_vac"]),
-                     isp_sl_s=round(r["isp_sl"]), cstar_ms=r["cstar"] and round(r["cstar"]),
-                     chamber_T_K=r["tc"] and round(r["tc"]), source=r["source"]))
+             thrust2_kN=round(v.thrust2_kN, 1)) for v in trade(payload, dv["total"], isp1, isp2)]
 st.dataframe(pd.DataFrame(rows))
