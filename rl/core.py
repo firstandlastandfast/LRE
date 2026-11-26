@@ -10,3 +10,8 @@ PROPELLANTS = {
     "methalox": dict(isp_sl=327, isp_vac=363, rho=830,  eps=0.07),
     "hydrolox": dict(isp_sl=390, isp_vac=450, rho=360,  eps=0.12),
 }
+
+# Liquid densities [kg/m3] and typical characteristic chamber length L* [m] (preliminary)
+DENS = {"LOX": 1141.0, "RP-1": 810.0, "LCH4": 422.0, "LH2": 71.0}
+FUEL_OF = {"kerolox": "RP-1", "methalox": "LCH4", "hydrolox": "LH2"}
+LSTAR = {"kerolox": 1.1, "methalox": 1.0, "hydrolox": 0.8}

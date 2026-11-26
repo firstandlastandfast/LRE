@@ -1,4 +1,3 @@
-
 """CHAMBER: preliminary thrust chamber + nozzle sizing from thrust, Pc, O/F, eps and CEA c*."""
 from math import pi, sqrt, tan, radians
 from .core import G0, DENS, FUEL_OF, LSTAR
