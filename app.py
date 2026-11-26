@@ -4,6 +4,8 @@ from rl.mission import Mission
 from rl.veh import trade
 from rl.thermo import best_of
 from rl.core import PROPELLANTS
+from rl.chamber import size_chamber
+from rl.thermo import perf
 
 st.title("RL - RocketLab")
 payload = st.number_input("Payload mass (kg)", 1.0, 1e6, 100.0)
@@ -38,8 +40,25 @@ for p in PROPELLANTS:
 st.dataframe(pd.DataFrame(rows))
 
 st.subheader("VEH / TRADE (2-stage, uses THERMO Isp, sorted by liftoff mass)")
+vehs = trade(payload, dv["total"], isp1, isp2)
 rows = [dict(stage1=v.prop1, stage2=v.prop2, split_s1=round(v.split, 2),
              liftoff_kg=round(v.liftoff_kg), s1_prop_kg=round(v.s1["prop"]),
              s2_prop_kg=round(v.s2["prop"]), thrust1_kN=round(v.thrust1_kN, 1),
-             thrust2_kN=round(v.thrust2_kN, 1)) for v in trade(payload, dv["total"], isp1, isp2)]
+             thrust2_kN=round(v.thrust2_kN, 1)) for v in vehs]
 st.dataframe(pd.DataFrame(rows))
+
+st.subheader("CHAMBER")
+labels = [f"{v.prop1} / {v.prop2}  ({round(v.liftoff_kg)} kg)" for v in vehs]
+v = vehs[labels.index(st.selectbox("Vehicle option", labels))]
+stage = st.radio("Stage", [1, 2], horizontal=True)
+n_eng = st.number_input("Engines in this stage", 1, 20, 1)
+prop, pc, eps_ = (v.prop1, pc1, e1) if stage == 1 else (v.prop2, pc2, e2)
+F = (v.thrust1_kN if stage == 1 else v.thrust2_kN) * 1e3
+of, r = best_of(prop, pc, eps_)
+if r["cstar"] is None:
+    st.warning("CEA not available: c* assumed 1800 m/s.")
+cstar = r["cstar"] or 1800.0
+isp = r["isp_sl"] if stage == 1 else r["isp_vac"]
+ch = size_chamber(prop, F, pc, of, eps_, isp, cstar, int(n_eng))
+st.caption(f"{prop}, O/F {of:.2f}, Pc {pc} bar, expansion ratio {eps_}, Isp {isp:.0f} s, c* {cstar:.0f} m/s")
+st.dataframe(pd.DataFrame({"value": {k: round(x, 3) for k, x in ch.items()}}))
