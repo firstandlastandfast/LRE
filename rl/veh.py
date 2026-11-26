@@ -21,10 +21,10 @@ class Vehicle:
     thrust2_kN: float
     split: float
 
-def size(payload_kg, dv_total, prop1, prop2, tw_liftoff=1.3, tw_stage2=0.8):
+def size(payload_kg, dv_total, prop1, prop2, isp1=None, isp2=None, tw_liftoff=1.3, tw_stage2=0.8):
     p1, p2 = PROPELLANTS[prop1], PROPELLANTS[prop2]
-    isp1 = 0.35 * p1["isp_sl"] + 0.65 * p1["isp_vac"]   # stage 1 effective
-    isp2 = p2["isp_vac"]
+    isp1 = isp1 or 0.35 * p1["isp_sl"] + 0.65 * p1["isp_vac"]   # stage 1 effective
+    isp2 = isp2 or p2["isp_vac"]
     best = None
     for i in range(1, 1000):
         f = i / 1000
@@ -42,7 +42,8 @@ def size(payload_kg, dv_total, prop1, prop2, tw_liftoff=1.3, tw_stage2=0.8):
     return Vehicle(prop1, prop2, s1, s2, s1["m0"],
                    tw_liftoff * s1["m0"] * G0 / 1e3, tw_stage2 * s2["m0"] * G0 / 1e3, f)
 
-def trade(payload_kg, dv_total):
-    """Quick comparison of all propellant pairs (seed for TRADE)."""
-    out = [size(payload_kg, dv_total, a, b) for a in PROPELLANTS for b in PROPELLANTS]
+def trade(payload_kg, dv_total, isp1=None, isp2=None):
+    """Compare all propellant pairs. isp1/isp2: optional {prop: Isp [s]} from THERMO."""
+    isp1, isp2 = isp1 or {}, isp2 or {}
+    out = [size(payload_kg, dv_total, a, b, isp1.get(a), isp2.get(b)) for a in PROPELLANTS for b in PROPELLANTS]
     return sorted([v for v in out if v], key=lambda v: v.liftoff_kg)
